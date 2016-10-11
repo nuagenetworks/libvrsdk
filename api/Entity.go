@@ -221,3 +221,28 @@ func (vrsConnection *VRSConnection) GetAllEntities() ([]string, error) {
 
 	return uuids, nil
 }
+
+// CheckEntityExists verifies if a specified entity exists in VRS
+func (vrsConnection *VRSConnection) CheckEntityExists(id string) (bool, error) {
+    	readRowArgs := ovsdb.ReadRowArgs{
+        	Condition: []string{ovsdb.NuageVMTableColumnVMUUID, "==", id},
+        	Columns:   []string{ovsdb.NuageVMTableColumnVMUUID},
+    	}
+
+    	var idRows []map[string]interface{}
+    	var err error
+    	if idRows, err = vrsConnection.vmTable.ReadRows(vrsConnection.ovsdbClient, readRowArgs); err != nil {
+        	return false, fmt.Errorf("OVSDB read error %v", err)
+    	}
+
+    	var ids []string
+    	for _, row := range idRows {
+        	ids = append(ids, row[ovsdb.NuageVMTableColumnVMUUID].(string))
+    	}
+
+    	if len(ids) == 1 && id == ids[0] {
+        	return true, err
+    	}
+
+    	return false, err
+}
