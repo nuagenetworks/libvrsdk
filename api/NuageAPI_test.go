@@ -43,6 +43,7 @@ const (
 
 var VSDConnection *bambou.Session
 var Root *vspk.Me
+var client = &OvsdbClient{}
 
 func init() {
 	VSDConnection, Root = vspk.NewSession(VSDUsername, VSDPassword, VSDOrganization, VSDURL)
@@ -278,8 +279,9 @@ func TestVMCreateDelete(t *testing.T) {
 		t.Fatal("Unable to create a test VM")
 	}
 
-	t.Logf("Waiting for 60 seconds before verifying port got resolved with an IP address in VRS")
-	time.Sleep(time.Duration(60) * time.Second)
+	// Registering for OVSDB updates instead of random sleep
+	ovsdbUpdateChan := client.GetNuagePortTableUpdate()
+    	fmt.Println(<-ovsdbUpdateChan)
 
 	// Verifying port got an IP on VSD
 	portIPOnVSD, vsdError := util.VerifyVSDPortResolution(Root, Enterprise, Domain, Zone, vmInfo["entityport"])
