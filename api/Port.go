@@ -1,11 +1,37 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"github.com/nuagenetworks/libvrsdk/api/port"
 	"github.com/nuagenetworks/libvrsdk/ovsdb"
 	"github.com/socketplane/libovsdb"
+	"reflect"
 )
+
+type empty struct{}
+
+type ovsdbEventType string
+
+const (
+	add       ovsdbEventType = "ADD"
+	update    ovsdbEventType = "UPDATE"
+	porttable string         = "Nuage_Port_Table"
+)
+
+// PortIPv4Info defines details to be populated
+// for container port resolved in OVSDB
+type PortIPv4Info struct {
+	IPAddr     string
+	Gateway    string
+	Mask       string
+	Registered bool
+}
+
+type ovsdbEvent struct {
+	EventType   ovsdbEventType
+	OvsdbObject interface{}
+}
 
 // GetAllPorts returns the slice of all the vport names attached to the VRS
 func (vrsConnection *VRSConnection) GetAllPorts() ([]string, error) {
@@ -149,5 +175,115 @@ func (vrsConnection *VRSConnection) UpdatePortMetadata(name string, metadata map
 		return fmt.Errorf("Unable to update the port metadata %s %v %v", name, metadata, err)
 	}
 
+	return nil
+}
+
+// GetNuagePortTableUpdate will register with OVSDB
+// for Nuage Port table updates and return as soon as
+// port table entry gets populated
+func (vrsConnection *VRSConnection) RegisterForPortUpdates(brport string, pnc chan *PortIPv4Info) error {
+	vrsConnection.registrationChannel <- &Registration{Brport: brport, Channel: pnc, Register: true}
+	return nil
+}
+
+func (vrsConnection *VRSConnection) DeregisterForPortUpdates(brport string) error {
+	vrsConnection.registrationChannel <- &Registration{Brport: brport, Channel: nil, Register: false}
+	return nil
+}
+
+func (vrsConnection VRSConnection) handlePortRegistration(registration *Registration) error {
+	brport := registration.Brport
+	register := registration.Register
+	pnc := registration.Channel
+	if register {
+		if _, ok := vrsConnection.pncTable[brport]; ok {
+			return fmt.Errorf("Already registered for this bridge port %s", brport)
+		} else {
+			vrsConnection.pncTable[brport] = pnc
+			if portInfo, exists := vrsConnection.pnpTable[brport]; exists {
+				select {
+				case pnc <- &portInfo:
+					fmt.Println("Pushed portInfo on channel")
+				default:
+					fmt.Println("No available receiver, skipping sending portInfo")
+				}
+				delete(vrsConnection.pnpTable, brport)
+			}
+		}
+	} else {
+		delete(vrsConnection.pncTable, brport)
+	}
+	return nil
+}
+
+func (vrsConnection VRSConnection) getPortInfo(row *libovsdb.Row) (*PortIPv4Info, error) {
+	portIPv4Info := PortIPv4Info{Registered: true}
+	if _, ok := row.Fields["ip_addr"]; ok {
+		ip := row.Fields["ip_addr"].(string)
+		if ip != "" {
+			portIPv4Info.IPAddr = ip
+		} else {
+			return nil, errors.New("Invalid or empty ip")
+		}
+	}
+	if _, ok := row.Fields["subnet_mask"]; ok {
+		subnet := row.Fields["subnet_mask"].(string)
+		if subnet != "" {
+			portIPv4Info.Mask = subnet
+		} else {
+			return nil, errors.New("Invalid or empty subnet")
+		}
+	}
+	if _, ok := row.Fields["gateway"]; ok {
+		gw := row.Fields["gateway"].(string)
+		if gw != "" {
+			portIPv4Info.Gateway = gw
+		} else {
+			return nil, errors.New("Invalid or empty gateway")
+		}
+	}
+	return &portIPv4Info, nil
+}
+
+func (vrsConnection VRSConnection) processUpdates(updates *libovsdb.TableUpdates) error {
+	for _, tableUpdate := range updates.Updates {
+		for _, row := range tableUpdate.Rows {
+			empty := libovsdb.Row{}
+			if !reflect.DeepEqual(row.New, empty) {
+				//check for whether the port is already registered for updates
+				portInfo, err := vrsConnection.getPortInfo(&(row.New))
+				if err == nil {
+					if _, ok := (row.New).Fields["name"]; ok {
+						portName := (row.New).Fields["name"].(string)
+						if pncChannel, exists := vrsConnection.pncTable[portName]; exists {
+							select {
+							case pncChannel <- portInfo:
+								fmt.Println("Pushed portInfo on channel")
+							default:
+								fmt.Println("No available receiver, skipping sending portInfo")
+							}
+						} else {
+							vrsConnection.pnpTable[portName] = *portInfo
+						}
+					}
+				}
+			} else { //delete case
+				if _, ok := (row.Old).Fields["name"]; ok {
+					portName := (row.Old).Fields["name"].(string)
+					if pncChannel, exists := vrsConnection.pncTable[portName]; exists {
+						fmt.Println("Got a delete row from ovsdb: ", portName)
+						select {
+						case pncChannel <- &PortIPv4Info{Registered: false}:
+							fmt.Println("Posted unregister on the channel so that caller can close the channel")
+						default:
+							fmt.Println("No available receiver, skipping sending de-register")
+						}
+						delete(vrsConnection.pncTable, portName)
+					}
+					delete(vrsConnection.pnpTable, portName)
+				}
+			}
+		}
+	}
 	return nil
 }
