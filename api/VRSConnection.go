@@ -10,6 +10,29 @@ type VRSConnection struct {
 	ovsdbClient *libovsdb.OvsdbClient
 	vmTable     ovsdb.NuageTable
 	portTable   ovsdb.NuageTable
+	updatesChan chan *libovsdb.TableUpdates
+}
+
+// Disconnected will retry connecting to OVSDB
+// and continue to register for OVSDB updates
+func (vrsConnection VRSConnection) Disconnected(ovsClient *libovsdb.OvsdbClient) {
+}
+
+// Locked is a placeholder function
+func (vrsConnection VRSConnection) Locked([]interface{}) {
+}
+
+// Stolen is a placeholder function
+func (vrsConnection VRSConnection) Stolen([]interface{}) {
+}
+
+// Echo is a placeholder function
+func (vrsConnection VRSConnection) Echo([]interface{}) {
+}
+
+// Update will provide updates on OVSDB table updates
+func (vrsConnection VRSConnection) Update(context interface{}, tableUpdates libovsdb.TableUpdates) {
+        vrsConnection.updatesChan <- &tableUpdates
 }
 
 // NewUnixSocketConnection creates a connection to the VRS Server using Unix sockets
