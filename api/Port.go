@@ -18,12 +18,6 @@ const (
 	porttable   string         = "Nuage_Port_Table"
 )
 
-// ClientEvent defines object type returned
-// from OVSDB monitoring
-type ClientEvent struct {
-    EventData interface{}
-}
-
 // PortIPv4Info defines details to be populated
 // for container port resolved in OVSDB
 type PortIPv4Info struct {
@@ -185,9 +179,9 @@ func (vrsConnection *VRSConnection) UpdatePortMetadata(name string, metadata map
 // GetNuagePortTableUpdate will register with OVSDB
 // for Nuage Port table updates and return as soon as
 // port table entry gets populated
-func (vrsConnection *VRSConnection) GetPortIPv4Info() <-chan ClientEvent {
+func (vrsConnection *VRSConnection) GetPortIPv4Info() <-chan PortIPv4Info {
 	var err error
-	clientChan := make(chan ClientEvent, 1)
+	clientChan := make(chan PortIPv4Info, 1)
         vrsConnection.updatesChan = make(chan *libovsdb.TableUpdates)
         vrsConnection.ovsdbClient.Register(vrsConnection)
 
@@ -217,31 +211,32 @@ func (vrsConnection *VRSConnection) GetPortIPv4Info() <-chan ClientEvent {
 		return clientChan
 	}
 
-        clientEvent := &ClientEvent{}
-        addedTable, addedRow := getEventOnTableUpdate(initialData, add)
+        portInfo := PortIPv4Info{}
+        addedTable, addedRow := getUpdatedPortTableRow(initialData, add)
         if addedTable == true { 
-                clientEvent = getPortInfo(porttable, addedRow, add)
+                portInfo = getPortInfo(porttable, addedRow, add)
         }
-        if clientEvent != nil { 
-                //clientChan <- *clientEvent
+        if portInfo.ipaddr != "" && portInfo.gateway != "" && portInfo.mask != "" {
+        	clientChan <- portInfo
+		return clientChan
         }
 
 	go func() {
                 for {
                         currentUpdate := <-vrsConnection.updatesChan
-                        updatedTable, updatedRow := getEventOnTableUpdate(currentUpdate, update)
+                        updatedTable, updatedRow := getUpdatedPortTableRow(currentUpdate, update)
                         if updatedTable == true {
-                                clientEvent = getPortInfo(porttable, updatedRow, update)
+                                portInfo = getPortInfo(porttable, updatedRow, update)
                         }
-                	if clientEvent != nil {
-                        	clientChan <- *clientEvent
-                	}
+                	if portInfo.ipaddr != "" && portInfo.gateway != "" && portInfo.mask != "" {
+                                clientChan <- portInfo
+                        }
                 }
         }()
         return clientChan
 }
 
-func getEventOnTableUpdate(data *libovsdb.TableUpdates, ovsdbEventType ovsdbEventType) (bool,libovsdb.Row) {
+func getUpdatedPortTableRow(data *libovsdb.TableUpdates, ovsdbEventType ovsdbEventType) (bool,libovsdb.Row) {
 
         for _, tableUpdate := range data.Updates {
                 for _, row := range tableUpdate.Rows {
@@ -259,7 +254,7 @@ func getEventOnTableUpdate(data *libovsdb.TableUpdates, ovsdbEventType ovsdbEven
         return false, libovsdb.Row{}
 }
 
-func getPortInfo(table string, row libovsdb.Row, ovsdbEventType ovsdbEventType) *ClientEvent {
+func getPortInfo(table string, row libovsdb.Row, ovsdbEventType ovsdbEventType) PortIPv4Info {
 	portIPv4Info := PortIPv4Info{}
 	switch table {
 	case porttable:
@@ -276,12 +271,8 @@ func getPortInfo(table string, row libovsdb.Row, ovsdbEventType ovsdbEventType) 
 			subnetmask := row.Fields["subnet_mask"].(string)
 			portIPv4Info.mask = subnetmask
 		}
-        clientEvent := ClientEvent{ovsdbEvent{
-            EventType:   ovsdbEventType,
-            OvsdbObject: portIPv4Info}, //fixme
-        }
-        return &clientEvent
+		return portIPv4Info
     	default:
-      		return nil
+      		return portIPv4Info
     }
 }
