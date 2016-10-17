@@ -185,7 +185,7 @@ func (vrsConnection *VRSConnection) UpdatePortMetadata(name string, metadata map
 // GetNuagePortTableUpdate will register with OVSDB
 // for Nuage Port table updates and return as soon as
 // port table entry gets populated
-func (vrsConnection *VRSConnection) GetNuagePortTableUpdate() <-chan ClientEvent {
+func (vrsConnection *VRSConnection) GetPortIPv4Info() <-chan ClientEvent {
 	var err error
 	clientChan := make(chan ClientEvent, 1)
         vrsConnection.updatesChan = make(chan *libovsdb.TableUpdates)
@@ -217,20 +217,21 @@ func (vrsConnection *VRSConnection) GetNuagePortTableUpdate() <-chan ClientEvent
 		return clientChan
 	}
 
+        clientEvent := &ClientEvent{}
+        addedTable, addedRow := getEventOnTableUpdate(initialData, add)
+        if addedTable == true { 
+                clientEvent = getPortInfo(porttable, addedRow, add)
+        }
+        if clientEvent != nil { 
+                //clientChan <- *clientEvent
+        }
+
 	go func() {
-		clientEvent := &ClientEvent{}
-                addTable, rowAdd := getEventOnTableUpdate(initialData, add)
-                if addTable == true {
-                        clientEvent = CreateObject(porttable, rowAdd, add)
-                }
-                if clientEvent != nil {
-                	//clientChan <- *clientEvent
-        	}
                 for {
                         currentUpdate := <-vrsConnection.updatesChan
-                        updateTable, rowUpdate := getEventOnTableUpdate(currentUpdate, update)
-                        if updateTable == true {
-                                clientEvent = CreateObject(porttable, rowUpdate, update)
+                        updatedTable, updatedRow := getEventOnTableUpdate(currentUpdate, update)
+                        if updatedTable == true {
+                                clientEvent = getPortInfo(porttable, updatedRow, update)
                         }
                 	if clientEvent != nil {
                         	clientChan <- *clientEvent
@@ -258,9 +259,7 @@ func getEventOnTableUpdate(data *libovsdb.TableUpdates, ovsdbEventType ovsdbEven
         return false, libovsdb.Row{}
 }
 
-// CreateObject will create an object filled with
-// required fields from OVSDB tables
-func CreateObject(table string, row libovsdb.Row, ovsdbEventType ovsdbEventType) *ClientEvent {
+func getPortInfo(table string, row libovsdb.Row, ovsdbEventType ovsdbEventType) *ClientEvent {
 	portIPv4Info := PortIPv4Info{}
 	switch table {
 	case porttable:
