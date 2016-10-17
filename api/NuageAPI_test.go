@@ -43,7 +43,6 @@ const (
 
 var VSDConnection *bambou.Session
 var Root *vspk.Me
-var client = &OvsdbClient{}
 
 func init() {
 	VSDConnection, Root = vspk.NewSession(VSDUsername, VSDPassword, VSDOrganization, VSDURL)
@@ -280,7 +279,7 @@ func TestVMCreateDelete(t *testing.T) {
 	}
 
 	// Registering for OVSDB updates instead of random sleep
-	ovsdbUpdateChan := client.GetNuagePortTableUpdate()
+	ovsdbUpdateChan := vrsConnection.GetPortIPv4Info()
     	fmt.Println(<-ovsdbUpdateChan)
 
 	// Verifying port got an IP on VSD
