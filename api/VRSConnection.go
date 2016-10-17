@@ -18,15 +18,15 @@ type VRSConnection struct {
 func (vrsConnection VRSConnection) Disconnected(ovsClient *libovsdb.OvsdbClient) {
 }
 
-// Locked is a placeholder function
+// Locked is a placeholder function for table updates
 func (vrsConnection VRSConnection) Locked([]interface{}) {
 }
 
-// Stolen is a placeholder function
+// Stolen is a placeholder function for table updates
 func (vrsConnection VRSConnection) Stolen([]interface{}) {
 }
 
-// Echo is a placeholder function
+// Echo is a placeholder function for table updates
 func (vrsConnection VRSConnection) Echo([]interface{}) {
 }
 
