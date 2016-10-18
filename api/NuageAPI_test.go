@@ -325,6 +325,8 @@ func TestVMCreateDelete(t *testing.T) {
 	}
 
 	t.Logf("VM %s got removed from VRS successfully", vmInfo["name"])
+
+	vrsConnection.Disconnect()
 }
 
 // TestVMMigrate tests that a VM and its ports get resolved on VRS as well as on VSD during a migration
@@ -531,10 +533,6 @@ func TestVMHotNICAdd(t *testing.T) {
 		t.Logf("VM %s port %s got resolved with an IP address %s on VSD", vmInfo["name"], vmInfo["entityport"], portIPOnVSD)
 	}
 
-	if err != nil {
-		t.Fatal("Unable to query port state on VRS")
-	}
-
 	if portInfo.IPAddr == "0.0.0.0" || portInfo.IPAddr == "" {
 		t.Fatalf("Unable to resolve VM %s ", vmInfo["name"])
 	}
@@ -546,6 +544,11 @@ func TestVMHotNICAdd(t *testing.T) {
 	if portIPOnVSD != portIPOnVRS {
 		t.Fatal("Port IPs on VSD and VRS do not match.")
 	}
+
+	vrsConnection.Disconnect()
+        if vrsConnection, err = NewUnixSocketConnection(UnixSocketFile); err != nil {
+                t.Fatal("Unable to connect to the VRS")
+        }
 
 	// Adding a NIC to an existing entity to test HOT NIC addition
 	hotNICEntityPort := fmt.Sprintf("veth.%d", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(100))
@@ -586,7 +589,7 @@ func TestVMHotNICAdd(t *testing.T) {
 	}
 
 	// Registering for OVSDB updates instead of random sleep
-        portInfoUpdateChan = vrsConnection.GetPortIPv4Info(vmInfo["entityport"])
+        portInfoUpdateChan = vrsConnection.GetPortIPv4Info(hotNICEntityPort)
         portInfo = <-portInfoUpdateChan
 
 	// Verifying port got an IP on VSD
@@ -639,6 +642,8 @@ func TestVMHotNICAdd(t *testing.T) {
 	if portDeletionFailure, vsdErr := util.VerifyVSDPortDeletion(Root, Enterprise, Domain, Zone, hotNICEntityPort); vsdErr != nil || portDeletionFailure {
 		t.Fatal("Port did not get removed on VSD")
 	}
+
+	vrsConnection.Disconnect()
 }
 
 // TestVMReconfigure tests that a VM and an associated port gets resolved
@@ -704,14 +709,16 @@ func TestVMReconfigure(t *testing.T) {
 		t.Fatal("Port IPs on VSD and VRS do not match.")
 	}
 
+	vrsConnection.Disconnect()
+        if vrsConnection, err = NewUnixSocketConnection(UnixSocketFile); err != nil {
+                t.Fatal("Unable to connect to the VRS")
+        }
+
 	// Notify VRS that VM has been re-configured
 	err = vrsConnection.PostEntityEvent(vmInfo["vmuuid"], entity.EventCategoryStopped, entity.EventStoppedShutdown)
 	if err != nil {
 		t.Fatal("Unable to notify VRS regarding VM shutdown event")
 	}
-
-	t.Logf("Waiting for 30 seconds before verifying re-configured VM port got resolved with an IP address in VRS")
-	time.Sleep(time.Duration(30) * time.Second)
 
 	// Reconfigure VM NIC to be in another subnet
 	portReconfigure := make(map[string]string)
@@ -788,6 +795,8 @@ func TestVMReconfigure(t *testing.T) {
 	}
 
 	t.Logf("VM %s got removed from VRS successfully", vmInfo["name"])
+
+	vrsConnection.Disconnect()
 }
 
 // TestVMPowerOff tests that a VM and an associated port gets resolved
@@ -912,4 +921,6 @@ func TestVMPowerOff(t *testing.T) {
 	if err != nil {
 		t.Fatal("Unable to delete veth pairs as a part of cleanup on VRS")
 	}
+
+	vrsConnection.Disconnect()
 }
