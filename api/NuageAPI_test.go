@@ -279,8 +279,8 @@ func TestVMCreateDelete(t *testing.T) {
 	}
 
 	// Registering for OVSDB updates instead of random sleep
-	ovsdbUpdateChan := vrsConnection.GetPortIPv4Info()
-    	portInfo := <-ovsdbUpdateChan
+	portInfoUpdateChan := vrsConnection.GetPortIPv4Info(vmInfo["entityport"])
+    	portInfo := <-portInfoUpdateChan
 
 	// Verifying port got an IP on VSD
 	portIPOnVSD, vsdError := util.VerifyVSDPortResolution(Root, Enterprise, Domain, Zone, vmInfo["entityport"])
@@ -290,11 +290,11 @@ func TestVMCreateDelete(t *testing.T) {
 		t.Logf("VM %s port %s got resolved with an IP address %s on VSD", vmInfo["name"], vmInfo["entityport"], portIPOnVSD)
 	}
 
-	if portInfo.ipaddr == "0.0.0.0" || portInfo.ipaddr == "" {
+	if portInfo.IPAddr == "0.0.0.0" || portInfo.IPAddr == "" {
 		t.Fatalf("Unable to resolve VM %s ", vmInfo["name"])
 	}
 
-	portIPOnVRS := portInfo.ipaddr
+	portIPOnVRS := portInfo.IPAddr
 	t.Logf("VM %s got resolved with an IP address %s on VRS", vmInfo["name"], portIPOnVRS)
 
 	// Comparing port's IP address on VRS and VSD
@@ -521,8 +521,8 @@ func TestVMHotNICAdd(t *testing.T) {
 	}
 
 	// Registering for OVSDB updates instead of random sleep
-        ovsdbUpdateChan := vrsConnection.GetPortIPv4Info()
-        portInfo := <-ovsdbUpdateChan
+        portInfoUpdateChan := vrsConnection.GetPortIPv4Info(vmInfo["entityport"])
+        portInfo := <-portInfoUpdateChan
 
 	portIPOnVSD, vsdError := util.VerifyVSDPortResolution(Root, Enterprise, Domain, Zone, vmInfo["entityport"])
 	if vsdError != nil || portIPOnVSD == "" || portIPOnVSD == "0.0.0.0" {
@@ -535,11 +535,11 @@ func TestVMHotNICAdd(t *testing.T) {
 		t.Fatal("Unable to query port state on VRS")
 	}
 
-	if portInfo.ipaddr == "0.0.0.0" || portInfo.ipaddr == "" {
+	if portInfo.IPAddr == "0.0.0.0" || portInfo.IPAddr == "" {
 		t.Fatalf("Unable to resolve VM %s ", vmInfo["name"])
 	}
 
-	portIPOnVRS := portInfo.ipaddr
+	portIPOnVRS := portInfo.IPAddr
 	t.Logf("VM %s got resolved with an IP address %s successfully", vmInfo["name"], portIPOnVRS)
 
 	// Comparing port's IP address on VRS and VSD
@@ -586,8 +586,8 @@ func TestVMHotNICAdd(t *testing.T) {
 	}
 
 	// Registering for OVSDB updates instead of random sleep
-        ovsdbUpdateChan = vrsConnection.GetPortIPv4Info()
-        portInfo = <-ovsdbUpdateChan
+        portInfoUpdateChan = vrsConnection.GetPortIPv4Info(vmInfo["entityport"])
+        portInfo = <-portInfoUpdateChan
 
 	// Verifying port got an IP on VSD
 	hotNICIPOnVSD, vsdError := util.VerifyVSDPortResolution(Root, Enterprise, Domain, Zone, hotNICEntityPort)
@@ -597,11 +597,11 @@ func TestVMHotNICAdd(t *testing.T) {
 		t.Logf("VM %s port %s got resolved with an IP address %s on VSD", vmInfo["name"], hotNICEntityPort, portIPOnVSD)
 	}
 
-	if portInfo.ipaddr == "0.0.0.0" || portInfo.ipaddr == "" {
+	if portInfo.IPAddr == "0.0.0.0" || portInfo.IPAddr == "" {
 		t.Fatalf("Unable to resolve VM %s with new port", vmInfo["name"])
 	}
 
-	hotNICIPOnVRS := portInfo.ipaddr
+	hotNICIPOnVRS := portInfo.IPAddr
 	t.Logf("VM %s got resolved with an IP address %s successfully", vmInfo["name"], hotNICIPOnVRS)
 
 	// Comparing port's IP address on VRS and VSD
@@ -681,8 +681,8 @@ func TestVMReconfigure(t *testing.T) {
 	}
 
         // Registering for OVSDB updates instead of random sleep
-        ovsdbUpdateChan := vrsConnection.GetPortIPv4Info()
-        portInfo := <-ovsdbUpdateChan
+        portInfoUpdateChan := vrsConnection.GetPortIPv4Info(vmInfo["entityport"])
+        portInfo := <-portInfoUpdateChan
 
 	// Verifying port got an IP on VSD
 	portIPOnVSD, vsdError := util.VerifyVSDPortResolution(Root, Enterprise, Domain, Zone, vmInfo["entityport"])
@@ -692,11 +692,11 @@ func TestVMReconfigure(t *testing.T) {
 		t.Logf("VM %s port %s got resolved with an IP address %s on VSD", vmInfo["name"], vmInfo["entityport"], portIPOnVSD)
 	}
 
-	if portInfo.ipaddr == "0.0.0.0" || portInfo.ipaddr == "" {
+	if portInfo.IPAddr == "0.0.0.0" || portInfo.IPAddr == "" {
 		t.Fatalf("Unable to resolve VM %s ", vmInfo["name"])
 	}
 
-	portIPOnVRS := portInfo.ipaddr
+	portIPOnVRS := portInfo.IPAddr
 	t.Logf("VM %s got resolved with an IP address %s successfully", vmInfo["name"], portIPOnVRS)
 
 	// Comparing port's IP address on VRS and VSD
@@ -735,8 +735,8 @@ func TestVMReconfigure(t *testing.T) {
 	}
 
 	// Registering for OVSDB updates instead of random sleep
-        ovsdbUpdateChan = vrsConnection.GetPortIPv4Info()
-        portInfo = <-ovsdbUpdateChan
+        portInfoUpdateChan = vrsConnection.GetPortIPv4Info(vmInfo["entityport"])
+        portInfo = <-portInfoUpdateChan
 
 	// Verifying port got an IP on VSD
 	reconfiguredPortIPOnVSD, vsdError := util.VerifyVSDPortResolution(Root, Enterprise, Domain, Zone, vmInfo["entityport"])
@@ -746,11 +746,11 @@ func TestVMReconfigure(t *testing.T) {
 		t.Logf("VM %s port %s got resolved with an IP address %s on VSD", vmInfo["name"], vmInfo["entityport"], reconfiguredPortIPOnVSD)
 	}
 
-	if portInfo.ipaddr == "0.0.0.0" || portInfo.ipaddr == "" {
+	if portInfo.IPAddr == "0.0.0.0" || portInfo.IPAddr == "" {
 		t.Fatalf("Unable to resolve re-configured VM %s ", vmInfo["name"])
 	}
 
-	reconfiguredPortIPOnVRS := portInfo.ipaddr
+	reconfiguredPortIPOnVRS := portInfo.IPAddr
 
 	if reconfiguredPortIPOnVRS == portIPOnVRS {
 		t.Fatal("VM port failed to re-configure and resolve with an IP in the new VSD network")
@@ -830,8 +830,8 @@ func TestVMPowerOff(t *testing.T) {
 	}
 
         // Registering for OVSDB updates instead of random sleep
-        ovsdbUpdateChan := vrsConnection.GetPortIPv4Info()
-        portInfo := <-ovsdbUpdateChan
+        portInfoUpdateChan := vrsConnection.GetPortIPv4Info(vmInfo["entityport"])
+        portInfo := <-portInfoUpdateChan
 
 	// Verifying port got an IP on VSD
 	portIPOnVSD, vsdError := util.VerifyVSDPortResolution(Root, Enterprise, Domain, Zone, vmInfo["entityport"])
@@ -841,11 +841,11 @@ func TestVMPowerOff(t *testing.T) {
 		t.Logf("VM %s port %s got resolved with an IP address %s on VSD", vmInfo["name"], vmInfo["entityport"], portIPOnVSD)
 	}
 
-	if portInfo.ipaddr == "0.0.0.0" || portInfo.ipaddr == "" {
+	if portInfo.IPAddr == "0.0.0.0" || portInfo.IPAddr == "" {
 		t.Fatalf("Unable to resolve VM %s ", vmInfo["name"])
 	}
 
-	portIPOnVRS := portInfo.ipaddr
+	portIPOnVRS := portInfo.IPAddr
 	t.Logf("VM %s got resolved with an IP address %s successfully", vmInfo["name"], portIPOnVRS)
 
 	// Comparing port's IP address on VRS and VSD
@@ -885,7 +885,7 @@ func TestVMPowerOff(t *testing.T) {
 	t.Logf("Waiting for 30 seconds before verifying port for powered off VM gets removed from OVSDB port table")
 	time.Sleep(time.Duration(30) * time.Second)
 
-	if portInfo.ipaddr != "" {
+	if portInfo.IPAddr != "" {
 		t.Fatal("Entry for migrated VM Port still present in OVSDB table")
 	}
 
