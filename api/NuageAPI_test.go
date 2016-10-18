@@ -891,15 +891,6 @@ func TestVMPowerOff(t *testing.T) {
 		t.Fatal("Unable to delete veth port for powered off VM")
 	}
 
-	t.Logf("Waiting for 30 seconds before verifying port for powered off VM gets removed from OVSDB port table")
-	time.Sleep(time.Duration(30) * time.Second)
-
-	if portInfo.IPAddr != "" {
-		t.Fatal("Entry for migrated VM Port still present in OVSDB table")
-	}
-
-	t.Logf("Port for powered off VM %s got removed from VRS successfully", vmInfo["name"])
-
 	err = vrsConnection.DestroyEntity(vmInfo["vmuuid"])
 	if err != nil {
 		t.Fatal("Unable to remove the entity from OVSDB table")
@@ -908,11 +899,12 @@ func TestVMPowerOff(t *testing.T) {
 	t.Logf("Waiting for 60 seconds before verifying port gets removed from VRS")
 	time.Sleep(time.Duration(60) * time.Second)
 
-	portState, _ := vrsConnection.GetPortState(vmInfo["entityport"])
+        portState := make(map[port.StateKey]interface{})
+        portState, _ = vrsConnection.GetPortState(vmInfo["entityport"])
 
-	if _, ok := portState[port.StateKeyIPAddress]; ok {
-		t.Fatal("Entry for deleted VM Port still present in OVSDB table")
-	}
+        if _, ok := portState[port.StateKeyIPAddress]; ok {
+                t.Fatal("Entry for deleted VM Port still present in OVSDB table")
+        }
 
 	t.Logf("VM %s got removed from VRS successfully", vmInfo["name"])
 
