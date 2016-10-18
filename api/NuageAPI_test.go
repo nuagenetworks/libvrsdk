@@ -709,11 +709,6 @@ func TestVMReconfigure(t *testing.T) {
 		t.Fatal("Port IPs on VSD and VRS do not match.")
 	}
 
-	vrsConnection.Disconnect()
-        if vrsConnection, err = NewUnixSocketConnection(UnixSocketFile); err != nil {
-                t.Fatal("Unable to connect to the VRS")
-        }
-
 	// Notify VRS that VM has been re-configured
 	err = vrsConnection.PostEntityEvent(vmInfo["vmuuid"], entity.EventCategoryStopped, entity.EventStoppedShutdown)
 	if err != nil {
@@ -741,9 +736,8 @@ func TestVMReconfigure(t *testing.T) {
 		t.Fatal("Unable to notify VRS regarding VM re-configure event")
 	}
 
-	// Registering for OVSDB updates instead of random sleep
-        portInfoUpdateChan = vrsConnection.GetPortIPv4Info(vmInfo["entityport"])
-        portInfo = <-portInfoUpdateChan
+	t.Logf("Waiting for 5 seconds before verifying re-configured VM port got resolved")
+	time.Sleep(time.Duration(5) * time.Second)
 
 	// Verifying port got an IP on VSD
 	reconfiguredPortIPOnVSD, vsdError := util.VerifyVSDPortResolution(Root, Enterprise, Domain, Zone, vmInfo["entityport"])
@@ -753,11 +747,17 @@ func TestVMReconfigure(t *testing.T) {
 		t.Logf("VM %s port %s got resolved with an IP address %s on VSD", vmInfo["name"], vmInfo["entityport"], reconfiguredPortIPOnVSD)
 	}
 
-	if portInfo.IPAddr == "0.0.0.0" || portInfo.IPAddr == "" {
+	portState, err := vrsConnection.GetPortState(vmInfo["entityport"])
+
+	if err != nil {
+		t.Fatal("Unable to query re-configured VM port state on VRS")
+	}
+
+	if portState[port.StateKeyIPAddress] == "0.0.0.0" || portState[port.StateKeyIPAddress] == "" {
 		t.Fatalf("Unable to resolve re-configured VM %s ", vmInfo["name"])
 	}
 
-	reconfiguredPortIPOnVRS := portInfo.IPAddr
+	reconfiguredPortIPOnVRS := portState[port.StateKeyIPAddress]
 
 	if reconfiguredPortIPOnVRS == portIPOnVRS {
 		t.Fatal("VM port failed to re-configure and resolve with an IP in the new VSD network")
@@ -768,7 +768,7 @@ func TestVMReconfigure(t *testing.T) {
 		t.Fatal("Port IPs on VSD and VRS do not match.")
 	}
 
-	if strings.Contains(reconfiguredPortIPOnVRS, ReconfNWPrefix) {
+	if strings.Contains((reconfiguredPortIPOnVRS.(string)), ReconfNWPrefix) {
 		t.Logf("Re-configured VM %s got resolved with an IP address %s successfully", vmInfo["name"], reconfiguredPortIPOnVRS)
 	} else {
 		t.Fatal("VM port failed to re-configure and resolve with an IP in the new VSD network")
@@ -783,7 +783,7 @@ func TestVMReconfigure(t *testing.T) {
 	t.Logf("Waiting for 300 seconds before verifying deleted port entry gets removed")
 	time.Sleep(time.Duration(300) * time.Second)
 
-	portState, _ := vrsConnection.GetPortState(vmInfo["entityport"])
+	portState, _ = vrsConnection.GetPortState(vmInfo["entityport"])
 
 	if _, ok := portState[port.StateKeyIPAddress]; ok {
 		t.Fatal("Entry for deleted VM Port still present in OVSDB table")
@@ -795,8 +795,6 @@ func TestVMReconfigure(t *testing.T) {
 	}
 
 	t.Logf("VM %s got removed from VRS successfully", vmInfo["name"])
-
-	vrsConnection.Disconnect()
 }
 
 // TestVMPowerOff tests that a VM and an associated port gets resolved
