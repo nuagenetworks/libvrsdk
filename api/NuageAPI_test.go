@@ -311,6 +311,18 @@ func TestVMCreateDelete(t *testing.T) {
 		t.Logf("Port IPs on VSD and VRS match.")
 	}
 
+    	// Verifying if entity exists in OVSDB
+    	entityExists, err := vrsConnection.CheckEntityExists(vmInfo["vmuuid"])
+    	if err != nil {
+        	t.Fatal("Unable to verify if entity exists in OVSDB")
+    	}
+
+    	if entityExists {
+        	t.Logf("VM %s with UUID %s exists in OVSDB", vmInfo["name"], vmInfo["vmuuid"])
+    	} else {
+        	t.Fatalf("VM %s with UUID %s does not exist in OVSDB", vmInfo["name"], vmInfo["vmuuid"])
+    	}
+
 	// Performing cleanup of port/entity on VRS
 	err = cleanup(vrsConnection, vmInfo)
 	if err != nil {
