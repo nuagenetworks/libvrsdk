@@ -183,37 +183,9 @@ func (vrsConnection *VRSConnection) UpdatePortMetadata(name string, metadata map
 func (vrsConnection *VRSConnection) GetPortIPv4Info(brport string) <-chan PortIPv4Info {
 	var err error
 	clientChan := make(chan PortIPv4Info, 1)
-        vrsConnection.updatesChan = make(chan *libovsdb.TableUpdates)
-        vrsConnection.ovsdbClient.Register(vrsConnection)
-
-	//set all monitors for ovsdb
-	//set a monitor on Nuage_Port_Table
-	tablesOfInterest := map[string]empty{"Nuage_Port_Table": {}}
-	monitorRequests := make(map[string]libovsdb.MonitorRequest)
-	schema, ok := vrsConnection.ovsdbClient.Schema["Open_vSwitch"]
-	if !ok {
-		return clientChan
-	}
-	for table, tableSchema := range schema.Tables {
-		if _, interesting := tablesOfInterest[table]; interesting {
-			var columns []string
-			for column := range tableSchema.Columns {
-				columns = append(columns, column)
-			}
-			monitorRequests[table] = libovsdb.MonitorRequest{
-				Columns: columns,
-				Select: libovsdb.MonitorSelect{
-					Initial: true,
-					Modify:  true}}
-		}
-	}
-	initialData, err := vrsConnection.ovsdbClient.Monitor("Open_vSwitch", nil, monitorRequests)
-	if err != nil {
-		return clientChan
-	}
 
         portInfo := PortIPv4Info{}
-        added, addedRow := getAddedOrUpdatedPortTableRow(initialData, add, brport)
+        added, addedRow := getAddedOrUpdatedPortTableRow(vrsConnection.lastUpdateData, add, brport)
         if added == true { 
                 portInfo = getPortInfo(porttable, addedRow, add)
         }
@@ -225,12 +197,14 @@ func (vrsConnection *VRSConnection) GetPortIPv4Info(brport string) <-chan PortIP
 	go func() {
                 for {
                         currentUpdate := <-vrsConnection.updatesChan
+			vrsConnection.lastUpdateData = currentUpdate
                         updated, updatedRow := getAddedOrUpdatedPortTableRow(currentUpdate, update, brport)
                         if updated == true {
                                 portInfo = getPortInfo(porttable, updatedRow, update)
                         }
                 	if portInfo.IPAddr != "" && portInfo.Gateway != "" && portInfo.Mask != "" && portInfo.Name == brport {
                                 clientChan <- portInfo
+				return
                         }
                 }
         }()

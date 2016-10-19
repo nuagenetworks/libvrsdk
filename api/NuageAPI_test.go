@@ -280,7 +280,14 @@ func TestVMCreateDelete(t *testing.T) {
 
 	// Registering for OVSDB updates instead of random sleep
 	portInfoUpdateChan := vrsConnection.GetPortIPv4Info(vmInfo["entityport"])
-    	portInfo := <-portInfoUpdateChan
+        portInfo := PortIPv4Info{}
+        ticker := time.NewTicker(time.Duration(2) * time.Second)
+        select {
+                case portInfo = <-portInfoUpdateChan:
+                        fmt.Println("Received IP from OVSDB")
+                case <-ticker.C:
+                        fmt.Println("No IP received from OVSDB")
+        }
 
 	// Verifying port got an IP on VSD
 	portIPOnVSD, vsdError := util.VerifyVSDPortResolution(Root, Enterprise, Domain, Zone, vmInfo["entityport"])
