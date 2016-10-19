@@ -5,7 +5,32 @@ import (
 	"github.com/nuagenetworks/libvrsdk/api/port"
 	"github.com/nuagenetworks/libvrsdk/ovsdb"
 	"github.com/socketplane/libovsdb"
+	"reflect"
 )
+
+type empty struct{}
+
+type ovsdbEventType string
+
+const (
+	add         ovsdbEventType = "ADD"
+	update      ovsdbEventType = "UPDATE"
+	porttable   string         = "Nuage_Port_Table"
+)
+
+// PortIPv4Info defines details to be populated
+// for container port resolved in OVSDB
+type PortIPv4Info struct {
+    IPAddr  string
+    Gateway string
+    Mask    string
+    Name    string
+}
+
+type ovsdbEvent struct {
+	EventType   ovsdbEventType
+	OvsdbObject interface{}
+}
 
 // GetAllPorts returns the slice of all the vport names attached to the VRS
 func (vrsConnection *VRSConnection) GetAllPorts() ([]string, error) {
@@ -150,4 +175,83 @@ func (vrsConnection *VRSConnection) UpdatePortMetadata(name string, metadata map
 	}
 
 	return nil
+}
+
+// GetNuagePortTableUpdate will register with OVSDB
+// for Nuage Port table updates and return as soon as
+// port table entry gets populated
+func (vrsConnection *VRSConnection) GetPortIPv4Info(brport string) <-chan PortIPv4Info {
+	var err error
+	clientChan := make(chan PortIPv4Info, 1)
+
+        portInfo := PortIPv4Info{}
+        added, addedRow := getAddedOrUpdatedPortTableRow(vrsConnection.lastUpdateData, add, brport)
+        if added == true { 
+                portInfo = getPortInfo(porttable, addedRow, add)
+        }
+        if portInfo.IPAddr != "" && portInfo.Gateway != "" && portInfo.Mask != "" && portInfo.Name == brport {
+        	clientChan <- portInfo
+		return clientChan
+        }
+
+	go func() {
+                for {
+                        currentUpdate := <-vrsConnection.updatesChan
+			vrsConnection.lastUpdateData = currentUpdate
+                        updated, updatedRow := getAddedOrUpdatedPortTableRow(currentUpdate, update, brport)
+                        if updated == true {
+                                portInfo = getPortInfo(porttable, updatedRow, update)
+                        }
+                	if portInfo.IPAddr != "" && portInfo.Gateway != "" && portInfo.Mask != "" && portInfo.Name == brport {
+                                clientChan <- portInfo
+				return
+                        }
+                }
+        }()
+        return clientChan
+}
+
+func getAddedOrUpdatedPortTableRow(data *libovsdb.TableUpdates, ovsdbEventType ovsdbEventType, brport string) (bool,libovsdb.Row) {
+
+        for _, tableUpdate := range data.Updates {
+                for _, row := range tableUpdate.Rows {
+                        empty := libovsdb.Row{}
+                        if !reflect.DeepEqual(row.New, empty) && ovsdbEventType == add {
+                                return true, row.New
+                        }
+
+                        if !reflect.DeepEqual(row.New, empty) && !reflect.DeepEqual(row.Old, empty) && ovsdbEventType == update && (row.New).Fields["name"].(string) == brport {
+                                return true, row.New
+                        }
+                }
+        }
+
+        return false, libovsdb.Row{}
+}
+
+func getPortInfo(table string, row libovsdb.Row, ovsdbEventType ovsdbEventType) PortIPv4Info {
+	portIPv4Info := PortIPv4Info{}
+	switch table {
+	case porttable:
+
+        	if _, ok := row.Fields["ip_addr"]; ok {
+            		ip := row.Fields["ip_addr"].(string)
+            		portIPv4Info.IPAddr = ip
+        	}
+        	if _, ok := row.Fields["gateway"]; ok {
+            		gw := row.Fields["gateway"].(string)
+            		portIPv4Info.Gateway = gw
+        	}
+        	if _, ok := row.Fields["subnet_mask"]; ok {
+            		subnetmask := row.Fields["subnet_mask"].(string)
+            		portIPv4Info.Mask = subnetmask
+        	}
+        	if _, ok := row.Fields["name"]; ok {
+            		portname := row.Fields["name"].(string)
+            		portIPv4Info.Name = portname
+        	}
+		return portIPv4Info
+    	default:
+      		return portIPv4Info
+    }
 }
