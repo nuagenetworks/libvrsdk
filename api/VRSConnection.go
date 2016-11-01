@@ -10,6 +10,8 @@ type portNameChannelMap map[string]chan *PortIPv4Info
 
 type portNamePortInfoMap map[string]PortIPv4Info
 
+// Registration will help to register for VRS
+// port table updates
 type Registration struct {
 	Brport   string
 	Channel  chan *PortIPv4Info
@@ -67,10 +69,8 @@ func NewUnixSocketConnection(socketfile string) (VRSConnection, error) {
 	vrsConnection.updatesChan = make(chan *libovsdb.TableUpdates)
 	vrsConnection.stopChannel = make(chan bool)
 	err = vrsConnection.monitorTable()
-	if err != nil {
-		return vrsConnection, err
-	}
-	return vrsConnection, nil
+
+	return vrsConnection, err
 }
 
 func (vrsConnection *VRSConnection) monitorTable() error {
