@@ -87,7 +87,7 @@ func (vrsConnection *VRSConnection) monitorTable() error {
 		if _, interesting := tablesOfInterest[table]; interesting {
 			var columns []string
 			for column := range tableSchema.Columns {
-				if column == "ip_addr" || column == "subnet_mask" || column == "gateway" || column == "name" {
+				if column == "ip_addr" || column == "subnet_mask" || column == "gateway" || column == "name" || column == "mac" {
 					columns = append(columns, column)
 				}
 			}

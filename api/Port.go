@@ -17,6 +17,7 @@ type PortIPv4Info struct {
 	IPAddr     string
 	Gateway    string
 	Mask       string
+	MAC        string
 	Registered bool
 }
 
@@ -226,6 +227,15 @@ func (vrsConnection VRSConnection) getPortInfo(row *libovsdb.Row) (*PortIPv4Info
 			return nil, errors.New("Invalid or empty gateway")
 		}
 	}
+	if _, ok := row.Fields["mac"]; ok {
+		mac := row.Fields["mac"].(string)
+		if mac != "" {
+			portIPv4Info.MAC = mac
+		} else {
+			return nil, errors.New("Invalid or empty port MAC address")
+		}
+	}
+
 	return &portIPv4Info, nil
 }
 
