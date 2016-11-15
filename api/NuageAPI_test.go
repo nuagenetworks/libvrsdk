@@ -92,7 +92,7 @@ func getPortInfo(vrsConnection VRSConnection, port string) (*PortIPv4Info, error
 
         portInfoUpdateChan := make(chan *PortIPv4Info)
         vrsConnection.RegisterForPortUpdates(port, portInfoUpdateChan)
-        ticker := time.NewTicker(time.Duration(2) * time.Second)
+        ticker := time.NewTicker(time.Duration(10) * time.Second)
         portInfo := &PortIPv4Info{}
         select {
         case portInfo = <-portInfoUpdateChan:
