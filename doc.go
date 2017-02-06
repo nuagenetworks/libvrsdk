@@ -14,8 +14,8 @@ sending VRS different events. The following unit test examples show how to handl
 SDK.
 
 Examples
-       const UnixSocketFile = "/var/run/openvswitch/db.sock"  
-
+        const UnixSocketFile = "/var/run/openvswitch/db.sock"  
+ 
 	// TestAddition tests that a VM and an associated port is added to VRS successfully
 	func TestAddition(t *testing.T) {
 
