@@ -171,33 +171,41 @@ func createVM(vrsConnection VRSConnection, vmInfo map[string]string, domain enti
 
 	// Define ports associated with the VM
 	ports := []string{vmInfo["entityport"]}
-
-	// Add entity to the VRS
-	entityInfo := EntityInfo{
-		UUID:     vmInfo["vmuuid"],
-		Name:     vmInfo["name"],
-		Type:     entity.VM,
-		Domain:   domain,
-		Ports:    ports,
-		Metadata: vmMetadata,
+	entityInfo := EntityInfo{}
+	entityInfo.UUID = vmInfo["vmuuid"]
+	entityInfo.Name = vmInfo["name"]
+	entityInfo.Domain = domain
+	entityInfo.Ports = ports
+	entityInfo.Metadata = vmMetadata
+	if domain != entity.Docker {
+		entityInfo.Type = entity.VM
+	} else {
+		entityInfo.Type = entity.Container
+		events := &entity.EntityEvents{}
+		events.EntityEventCategory = entity.EventCategoryStarted
+		events.EntityEventType = entity.EventStartedBooted
+		events.EntityState = entity.Running
+		events.EntityReason = entity.RunningBooted
+		entityInfo.Events = events
 	}
 	err = vrsConnection.CreateEntity(entityInfo)
 	if err != nil {
 		return fmt.Errorf("Unable to add entity to VRS %v", err)
 	}
 
-	// Notify VRS that VM has completed booted
-	err = vrsConnection.PostEntityEvent(vmInfo["vmuuid"], eventCategory, eventType)
-
-	if err != nil {
-		return fmt.Errorf("Problem sending VRS notification %v", err)
+	if domain != entity.Docker {
+		// Notify VRS that VM has completed booted
+		err = vrsConnection.PostEntityEvent(vmInfo["vmuuid"], eventCategory, eventType)
+		if err != nil {
+			return fmt.Errorf("Problem sending VRS notification %v", err)
+		}
 	}
 	return nil
 }
 
-// splitActivationCreateVM will be a template to create dummy VM entries per
+// splitActivationCreateContainer will be a template to create dummy VM entries per
 // API test execution
-func splitActivationCreateVM(vrsConnection VRSConnection, vmInfo map[string]string, domain entity.Domain,
+func splitActivationCreateContainer(vrsConnection VRSConnection, vmInfo map[string]string, domain entity.Domain,
 	eventCategory entity.EventCategory, eventType entity.Event) error {
 
 	var err error
@@ -230,26 +238,26 @@ func splitActivationCreateVM(vrsConnection VRSConnection, vmInfo map[string]stri
 	// Define ports associated with the VM
 	ports := []string{vmInfo["entityport"]}
 
+	events := &entity.EntityEvents{}
+	events.EntityEventCategory = entity.EventCategoryStarted
+	events.EntityEventType = entity.EventStartedBooted
+	events.EntityState = entity.Running
+	events.EntityReason = entity.RunningBooted
 	// Add entity to the VRS
 	entityInfo := EntityInfo{
 		UUID:     vmInfo["vmuuid"],
 		Name:     vmInfo["name"],
-		Type:     entity.VM,
+		Type:     entity.Container,
 		Domain:   domain,
 		Ports:    ports,
 		Metadata: vmMetadata,
+		Events:   events,
 	}
 	err = vrsConnection.CreateEntity(entityInfo)
 	if err != nil {
 		return fmt.Errorf("Unable to add entity to VRS %v", err)
 	}
 
-	// Notify VRS that VM has completed booted
-	err = vrsConnection.PostEntityEvent(vmInfo["vmuuid"], eventCategory, eventType)
-
-	if err != nil {
-		return fmt.Errorf("Problem sending VRS notification %v", err)
-	}
 	return nil
 }
 
@@ -317,6 +325,88 @@ func TestGetAllVMsVports(t *testing.T) {
 	}
 }
 
+// TestContainerCreateDelete tests that a VM and an associated port gets resolved
+// in VRS-VM as well as on the VSD and gets removed from VRS and VSD when deleted
+func TestContainerCreateDelete(t *testing.T) {
+
+	var vrsConnection VRSConnection
+	var err error
+
+	err = util.EnableOVSDBRPCSocket(VRSPort)
+	if err != nil {
+		t.Fatal("Unable to add an interface to the ovsdb-server on VRS to make it accept RPCs via TCP socket")
+	}
+
+	if vrsConnection, err = NewUnixSocketConnection(UnixSocketFile); err != nil {
+		t.Fatal("Unable to connect to the VRS")
+	}
+
+	vmInfo := make(map[string]string)
+	vmInfo["name"] = fmt.Sprintf("Test-Container-%d", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(100))
+	vmInfo["mac"] = util.GenerateMAC()
+	containerUUID := strings.Replace(uuid.Generate().String(), "-", "", -1)
+	containerUUID = containerUUID + strings.Replace(uuid.Generate().String(), "-", "", -1)
+	vmInfo["vmuuid"] = containerUUID
+	vmInfo["entityport"] = fmt.Sprintf("veth.%d", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(100))
+	vmInfo["brport"] = fmt.Sprintf("vethbr.%d", rand.New(rand.NewSource(time.Now().UnixNano())).Intn(100))
+	portList := []string{vmInfo["entityport"], vmInfo["brport"]}
+	err = util.CreateVETHPair(portList)
+	if err != nil {
+		t.Fatal("Unable to create veth pairs on VRS")
+	}
+
+	// Add the paired veth port to alubr0 on VRS
+	err = util.AddVETHPortToVRS(vmInfo["entityport"], vmInfo["vmuuid"], vmInfo["name"])
+	if err != nil {
+		t.Fatal("Unable to add veth port to alubr0")
+	}
+
+	err = createVM(vrsConnection, vmInfo, entity.Docker, entity.EventCategoryStarted, entity.EventStartedBooted)
+	if err != nil {
+		t.Fatal("Unable to create a test VM")
+	}
+	// Obtaining entity port information from VRS using update mechanism
+	portInfo, err := getPortInfo(vrsConnection, vmInfo["entityport"])
+	if err != nil {
+		t.Fatal("Unable to obtain an IP address for the VM from VRS")
+	}
+
+	if portInfo.IPAddr == "0.0.0.0" || portInfo.IPAddr == "" {
+		t.Fatalf("Unable to resolve VM %s ", vmInfo["name"])
+	}
+
+	t.Logf("VM %s got resolved with an IP address %s on VRS", vmInfo["name"], portInfo.IPAddr)
+
+	// Verifying if entity exists in OVSDB
+	entityExists, err := vrsConnection.CheckEntityExists(vmInfo["vmuuid"])
+	if err != nil {
+		t.Fatal("Unable to verify if entity exists in OVSDB")
+	}
+
+	if entityExists {
+		t.Logf("VM %s with UUID %s exists in OVSDB", vmInfo["name"], vmInfo["vmuuid"])
+	} else {
+		t.Fatalf("VM %s with UUID %s does not exist in OVSDB", vmInfo["name"], vmInfo["vmuuid"])
+	}
+
+	// Performing cleanup of port/entity on VRS
+	err = cleanup(vrsConnection, vmInfo)
+	if err != nil {
+		t.Fatal("Unable to delete port from OVSDB table")
+	}
+
+	t.Logf("Waiting for 300 seconds before verifying port gets removed from VRS")
+
+	portState, _ := vrsConnection.GetPortState(vmInfo["entityport"])
+	if _, ok := portState[port.StateKeyIPAddress]; ok {
+		t.Fatal("Entry for deleted VM Port still present in OVSDB table")
+	}
+
+	t.Logf("VM %s got removed from VRS successfully", vmInfo["name"])
+
+	vrsConnection.Disconnect()
+}
+
 // TestVMCreateDelete tests that a VM and an associated port gets resolved
 // in VRS-VM as well as on the VSD and gets removed from VRS and VSD when deleted
 func TestVMCreateDelete(t *testing.T) {
@@ -355,7 +445,6 @@ func TestVMCreateDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal("Unable to create a test VM")
 	}
-
 	// Obtaining entity port information from VRS using update mechanism
 	portInfo, err := getPortInfo(vrsConnection, vmInfo["entityport"])
 	if err != nil {
@@ -1080,7 +1169,7 @@ func TestSplitActivation(t *testing.T) {
 		t.Fatal("Unable to add veth port to alubr0")
 	}
 
-	if err := splitActivationCreateVM(vrsConnection, containerInfo, entity.Container, entity.EventCategoryStarted, entity.EventStartedBooted); err != nil {
+	if err := splitActivationCreateContainer(vrsConnection, containerInfo, entity.Container, entity.EventCategoryStarted, entity.EventStartedBooted); err != nil {
 		t.Fatal("Unable to create a test VM")
 	}
 

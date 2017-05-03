@@ -16,6 +16,7 @@ type EntityInfo struct {
 	Domain   entity.Domain
 	Ports    []string
 	Metadata map[entity.MetadataKey]string
+	Events   *entity.EntityEvents
 }
 
 // CreateEntity adds an entity to the Nuage VRS
@@ -43,10 +44,6 @@ func (vrsConnection *VRSConnection) CreateEntity(info EntityInfo) error {
 
 	nuageVMTableRow := ovsdb.NuageVMTableRow{
 		Type:            int(info.Type),
-		Event:           int(entity.EventCategoryDefined),
-		EventType:       int(entity.EventDefinedAdded),
-		State:           int(entity.Running),
-		Reason:          int(entity.RunningUnknown),
 		VMName:          info.Name,
 		VMUuid:          info.UUID,
 		Domain:          info.Domain,
@@ -54,6 +51,17 @@ func (vrsConnection *VRSConnection) CreateEntity(info EntityInfo) error {
 		NuageEnterprise: info.Metadata[entity.MetadataKeyEnterprise],
 		Metadata:        metadata,
 		Ports:           info.Ports,
+		Event:           int(entity.EventCategoryDefined),
+		EventType:       int(entity.EventDefinedAdded),
+		State:           int(entity.Running),
+		Reason:          int(entity.RunningUnknown),
+	}
+
+	if info.Events != nil {
+		nuageVMTableRow.Event = int(info.Events.EntityEventCategory)
+		nuageVMTableRow.EventType = int(info.Events.EntityEventType)
+		nuageVMTableRow.State = int(info.Events.EntityState)
+		nuageVMTableRow.Reason = int(info.Events.EntityReason)
 	}
 
 	if err := vrsConnection.vmTable.InsertRow(vrsConnection.ovsdbClient, &nuageVMTableRow); err != nil {
