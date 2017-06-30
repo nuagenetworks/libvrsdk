@@ -30,14 +30,14 @@ const (
 	Network2        = "vrsdk-subnet-2"
 	ReconfNWPrefix  = "192.168.178"
 	Bridge          = "alubr0"
-	VSDIP           = "172.22.62.209"
+	VSDIP           = "10.10.10.10"
 	VSDPort         = "8443"
 	VSDURL          = "https://" + VSDIP + ":" + VSDPort
-	VSDUsername     = "csproot"
-	VSDPassword     = "csproot"
-	VSDOrganization = "csp"
+	VSDUsername     = "*******"
+	VSDPassword     = "*******"
+	VSDOrganization = "***"
 	VRSUser         = "root"
-	VRSPassword     = "tigris"
+	VRSPassword     = "******"
 	UnixSocketFile  = "/var/run/openvswitch/db.sock"
 )
 
@@ -123,8 +123,7 @@ func cleanup(vrsConnection VRSConnection, vmInfo map[string]string) error {
 		return fmt.Errorf("Unable to delete port from OVSDB table %v", err)
 	}
 
-	// Purging out the veth port from VRS alubr0
-	err = util.RemoveVETHPortFromVRS(vmInfo["entityport"])
+	err = vrsConnection.RemovePortFromAlubr0(vmInfo["entityport"])
 	if err != nil {
 		return fmt.Errorf("Unable to delete veth port as part of cleanup from alubr0 %v", err)
 	}
@@ -289,8 +288,12 @@ func TestGetAllVMsVports(t *testing.T) {
 	}
 
 	// Add the paired veth port to alubr0 on VRS
-	err = util.AddVETHPortToVRS(vmInfo["entityport"], vmInfo["vmuuid"], vmInfo["name"])
+	var entityInfo EntityInfo
+	entityInfo.Name = vmInfo["name"]
+	entityInfo.UUID = vmInfo["vmuuid"]
+	err = vrsConnection.AddPortToAlubr0(vmInfo["entityport"], entityInfo)
 	if err != nil {
+		t.Errorf("Error inserting row in alubr0: %v", err)
 		t.Fatal("Unable to add veth port to alubr0")
 	}
 
@@ -355,9 +358,13 @@ func TestContainerCreateDelete(t *testing.T) {
 		t.Fatal("Unable to create veth pairs on VRS")
 	}
 
+	var entityInfo EntityInfo
+	entityInfo.Name = vmInfo["name"]
+	entityInfo.UUID = vmInfo["vmuuid"]
 	// Add the paired veth port to alubr0 on VRS
-	err = util.AddVETHPortToVRS(vmInfo["entityport"], vmInfo["vmuuid"], vmInfo["name"])
+	err = vrsConnection.AddPortToAlubr0(vmInfo["entityport"], entityInfo)
 	if err != nil {
+		t.Errorf("Error inserting row in alubr0: %v", err)
 		t.Fatal("Unable to add veth port to alubr0")
 	}
 
@@ -435,9 +442,13 @@ func TestVMCreateDelete(t *testing.T) {
 		t.Fatal("Unable to create veth pairs on VRS")
 	}
 
+	var entityInfo EntityInfo
+	entityInfo.Name = vmInfo["name"]
+	entityInfo.UUID = vmInfo["vmuuid"]
 	// Add the paired veth port to alubr0 on VRS
-	err = util.AddVETHPortToVRS(vmInfo["entityport"], vmInfo["vmuuid"], vmInfo["name"])
+	err = vrsConnection.AddPortToAlubr0(vmInfo["entityport"], entityInfo)
 	if err != nil {
+		t.Errorf("Error inserting row in alubr0: %v", err)
 		t.Fatal("Unable to add veth port to alubr0")
 	}
 
@@ -692,9 +703,13 @@ func TestVMHotNICAdd(t *testing.T) {
 		t.Fatal("Unable to create veth pairs on VRS")
 	}
 
+	var entityInfo EntityInfo
+	entityInfo.Name = vmInfo["name"]
+	entityInfo.UUID = vmInfo["vmuuid"]
 	// Add the paired veth port to alubr0 on VRS
-	err = util.AddVETHPortToVRS(vmInfo["entityport"], vmInfo["vmuuid"], vmInfo["name"])
+	err = vrsConnection.AddPortToAlubr0(vmInfo["entityport"], entityInfo)
 	if err != nil {
+		t.Errorf("Error inserting row in alubr0: %v", err)
 		t.Fatal("Unable to add veth port to alubr0")
 	}
 
@@ -756,9 +771,11 @@ func TestVMHotNICAdd(t *testing.T) {
 		t.Fatal("Unable to create entity new NIC port")
 	}
 
-	err = util.AddVETHPortToVRS(hotNICEntityPort, vmInfo["vmuuid"], vmInfo["name"])
+	// Add the paired veth port to alubr0 on VRS
+	err = vrsConnection.AddPortToAlubr0(hotNICEntityPort, entityInfo)
 	if err != nil {
-		t.Fatal("Unable to add hot NIC port to alubr0")
+		t.Errorf("Error inserting row in alubr0: %v", err)
+		t.Fatal("Unable to add veth port to alubr0")
 	}
 
 	err = vrsConnection.AddEntityPort(vmInfo["vmuuid"], hotNICEntityPort)
@@ -809,9 +826,9 @@ func TestVMHotNICAdd(t *testing.T) {
 	}
 
 	// Purging out the newly added HOT NIC veth port from VRS alubr0
-	err = util.RemoveVETHPortFromVRS(hotNICEntityPort)
+	err = vrsConnection.RemovePortFromAlubr0(hotNICEntityPort)
 	if err != nil {
-		t.Fatal("Unable to delete newly added veth port as part of cleanup from alubr0")
+		t.Fatalf("Unable to delete newly added veth port as part of cleanup from alubr0 %v", err)
 	}
 
 	// Cleaning up veth paired ports created for HOT NIC addition from VRS
@@ -859,9 +876,13 @@ func TestVMReconfigure(t *testing.T) {
 		t.Fatal("Unable to create veth pairs on VRS")
 	}
 
+	var entityInfo EntityInfo
+	entityInfo.Name = vmInfo["name"]
+	entityInfo.UUID = vmInfo["vmuuid"]
 	// Add the paired veth port to alubr0 on VRS
-	err = util.AddVETHPortToVRS(vmInfo["entityport"], vmInfo["vmuuid"], vmInfo["name"])
+	err = vrsConnection.AddPortToAlubr0(vmInfo["entityport"], entityInfo)
 	if err != nil {
+		t.Errorf("Error inserting row in alubr0: %v", err)
 		t.Fatal("Unable to add veth port to alubr0")
 	}
 
@@ -1012,9 +1033,13 @@ func TestVMPowerOff(t *testing.T) {
 		t.Fatal("Unable to create veth pairs on VRS")
 	}
 
+	var entityInfo EntityInfo
+	entityInfo.Name = vmInfo["name"]
+	entityInfo.UUID = vmInfo["vmuuid"]
 	// Add the paired veth port to alubr0 on VRS
-	err = util.AddVETHPortToVRS(vmInfo["entityport"], vmInfo["vmuuid"], vmInfo["name"])
+	err = vrsConnection.AddPortToAlubr0(vmInfo["entityport"], entityInfo)
 	if err != nil {
+		t.Errorf("Error inserting row in alubr0: %v", err)
 		t.Fatal("Unable to add veth port to alubr0")
 	}
 
@@ -1076,9 +1101,9 @@ func TestVMPowerOff(t *testing.T) {
 	}
 
 	// Purging out the veth port from VRS alubr0
-	err = util.RemoveVETHPortFromVRS(vmInfo["entityport"])
+	err = vrsConnection.RemovePortFromAlubr0(vmInfo["entityport"])
 	if err != nil {
-		t.Fatal("Unable to delete veth port for powered off VM")
+		t.Fatalf("Unable to delete veth port for powered off VM %v", err)
 	}
 
 	err = vrsConnection.DestroyEntity(vmInfo["vmuuid"])
@@ -1164,8 +1189,14 @@ func TestSplitActivation(t *testing.T) {
 		t.Fatal("Unable to create veth pairs on VRS")
 	}
 
+	var entityInfo EntityInfo
+	entityInfo.Name = containerInfo["name"]
+	entityInfo.UUID = containerInfo["vmuuid"]
+	var err2 error
 	// Add the paired veth port to alubr0 on VRS
-	if err := util.AddVETHPortToVRS(containerInfo["entityport"], containerInfo["vmuuid"], containerInfo["name"]); err != nil {
+	err2 = vrsConnection.AddPortToAlubr0(containerInfo["entityport"], entityInfo)
+	if err2 != nil {
+		t.Errorf("Error inserting row in alubr0: %v", err)
 		t.Fatal("Unable to add veth port to alubr0")
 	}
 
