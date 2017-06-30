@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -72,32 +73,6 @@ func DeleteVETHPair(entityPort string, brPort string) error {
 	return nil
 }
 
-// AddVETHPortToVRS will help add veth ports to VRS alubr0
-func AddVETHPortToVRS(port string, vmuuid string, vmname string) error {
-
-	cmdstr := fmt.Sprintf("/usr/bin/ovs-vsctl --no-wait --if-exists del-port alubr0 %s -- %s-port alubr0 %s -- set interface %s 'external-ids={vm-uuid=%s,vm-name=%s}'", port, add, port, port, vmuuid, vmname)
-	cmd := exec.Command("bash", "-c", cmdstr)
-	_, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("Problem adding veth port to alubr0 on VRS %v", err)
-	}
-
-	return nil
-}
-
-// RemoveVETHPortFromVRS will help delete veth ports from VRS alubr0
-func RemoveVETHPortFromVRS(port string) error {
-
-	cmdstr := fmt.Sprintf("/usr/bin/ovs-vsctl --no-wait %s-port alubr0 %s", delete, port)
-	cmd := exec.Command("bash", "-c", cmdstr)
-	_, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("Problem deleting veth port from alubr0 on VRS %v", err)
-	}
-
-	return nil
-}
-
 // GenerateMAC will act as a pseudo random MAC generator
 func GenerateMAC() string {
 	hw := make(net.HardwareAddr, 6)
@@ -116,4 +91,14 @@ func GenerateMAC() string {
 	copy(hw, randbuf)
 	return hw.String()
 
+}
+
+// SplitUUIDString will hep extract UUID string
+// obtained from Port table
+func SplitUUIDString(uuid string) string {
+
+	uuidName := strings.Split(uuid, "[")
+	uuidStrSplit := strings.Split(uuidName[1], "]")
+	uuidStr := strings.Split(uuidStrSplit[0], " ")
+	return uuidStr[1]
 }
