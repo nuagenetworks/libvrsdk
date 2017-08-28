@@ -143,7 +143,7 @@ func (vrsConnection *VRSConnection) RemoveEntityPort(uuid string, portName strin
 	return nil
 }
 
-// GetEntityPorts retrives the list of all of the attached ports
+// GetEntityPorts retrieves the list of all of the attached ports
 func (vrsConnection *VRSConnection) GetEntityPorts(uuid string) ([]string, error) {
 
 	readRowArgs := ovsdb.ReadRowArgs{
@@ -157,6 +157,32 @@ func (vrsConnection *VRSConnection) GetEntityPorts(uuid string) ([]string, error
 	}
 
 	return ovsdb.UnMarshallOVSStringSet(row[ovsdb.NuageVMTableColumnPorts])
+}
+
+// GetEntityInfo retrieves entity information from OVSDB
+func (vrsConnection *VRSConnection) GetEntityInfo(uuid string) (*EntityInfo, error) {
+
+	readRowArgs := ovsdb.ReadRowArgs{
+		Columns:   []string{ovsdb.NuageVMTableColumnVMName},
+		Condition: []string{ovsdb.NuageVMTableColumnVMUUID, "==", uuid},
+	}
+
+	row, err := vrsConnection.vmTable.ReadRow(vrsConnection.ovsdbClient, readRowArgs)
+	if err != nil {
+		return nil, err
+	}
+
+	var ports []string
+	if ports, err = vrsConnection.GetEntityPorts(uuid); err != nil {
+		return nil, err
+	}
+
+	entityInfo := &EntityInfo{
+		Name:  row[ovsdb.NuageVMTableColumnVMName].(string),
+		Ports: ports,
+	}
+
+	return entityInfo, err
 }
 
 // SetEntityState sets the entity state
