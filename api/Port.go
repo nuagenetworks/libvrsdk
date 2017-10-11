@@ -362,9 +362,15 @@ func (vrsConnection *VRSConnection) RemovePortFromAlubr0(portName string) error 
 
 	selectOperation := []libovsdb.Operation{selectOp}
 	reply, err := vrsConnection.ovsdbClient.Transact(OvsDBName, selectOperation...)
-	if err != nil || len(reply) != 1 || len(reply[0].Rows) != 1 {
+	if err != nil || len(reply) != 1 {
 		return fmt.Errorf("Problem selecting row in the OVSDB Port table for alubr0")
 	}
+
+        for _, o := range reply {
+                if o.Error != "" {
+                        return fmt.Errorf("Problem selecting row in the OVSDB Port table for deletion")
+                }
+        }
 
 	// Obtain Port table OVSDB row corresponding to the port name
 	ovsdbRow := reply[0].Rows[0]
