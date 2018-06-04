@@ -2,10 +2,11 @@ package api
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/nuagenetworks/libvrsdk/api/entity"
 	"github.com/nuagenetworks/libvrsdk/ovsdb"
 	"github.com/socketplane/libovsdb"
-	"strings"
 )
 
 // EntityInfo represents the information about an entity that needs to provided by the user to VRS
@@ -66,6 +67,17 @@ func (vrsConnection *VRSConnection) CreateEntity(info EntityInfo) error {
 
 	if err := vrsConnection.vmTable.InsertRow(vrsConnection.ovsdbClient, &nuageVMTableRow); err != nil {
 		return fmt.Errorf("Problem adding entity info to VRS %v", err)
+	}
+
+	return nil
+}
+
+// DestroyEntity removes an entity from the Nuage VRS
+func (vrsConnection *VRSConnection) DestroyEntityByVMName(vm_name string) error {
+
+	condition := []string{ovsdb.NuageVMTableColumnVMName, "==", vm_name}
+	if err := vrsConnection.vmTable.DeleteRow(vrsConnection.ovsdbClient, condition); err != nil {
+		return fmt.Errorf("Unable to delete the entity from VRS %v", err)
 	}
 
 	return nil

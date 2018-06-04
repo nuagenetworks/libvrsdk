@@ -1,16 +1,18 @@
 package ovsdb
 
 import (
-	"github.com/nuagenetworks/libvrsdk/api/entity"
-	"github.com/socketplane/libovsdb"
 	"reflect"
 	"strings"
+
+	"github.com/nuagenetworks/libvrsdk/api/entity"
+	"github.com/socketplane/libovsdb"
 )
 
 // These constants describe the Nuage_VM_Table
 const (
 	NuageVMTable                    = "Nuage_VM_Table"
 	NuageVMTableColumnVMUUID        = "vm_uuid"
+	NuageVMTableColumnVMName        = "vm_name"
 	NuageVMTableColumnPorts         = "ports"
 	NuageVMTableColumnState         = "state"
 	NuageVMTableColumnReason        = "reason"
