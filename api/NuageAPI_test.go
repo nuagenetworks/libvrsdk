@@ -462,6 +462,27 @@ func TestVMCreateDelete(t *testing.T) {
 		t.Fatal("Unable to obtain an IP address for the VM from VRS")
 	}
 
+	// Obtain entity name from OVSDB
+	entityInfoVRS, err := vrsConnection.GetEntityInfo(vmInfo["vmuuid"])
+	if err != nil {
+		t.Fatal("Unable to obtain VM name information from OVSDB")
+	}
+	fmt.Println(entityInfoVRS.Name)
+
+	// Obtain domain and zone information for the entity port
+	var portMetadataInfo map[port.StateKey]interface{}
+	portMetadataInfo, err = vrsConnection.GetPortState(vmInfo["entityport"])
+	if err != nil {
+		t.Fatal("Unable to obtain port Nuage metadata from VRS")
+	}
+
+	var domain string
+	var zone string
+	domain = portMetadataInfo[port.StateKeyNuageDomain].(string)
+	zone = portMetadataInfo[port.StateKeyNuageZone].(string)
+	fmt.Println(zone)
+	fmt.Println(domain)
+
 	// Verifying port got an IP on VSD
 	portIPOnVSD, vsdError := util.VerifyVSDPortResolution(Root, Enterprise, Domain, Zone, vmInfo["entityport"])
 	if vsdError != nil || portIPOnVSD == "" || portIPOnVSD == "0.0.0.0" {
