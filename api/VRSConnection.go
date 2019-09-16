@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+
 	"github.com/nuagenetworks/libvrsdk/ovsdb"
 	"github.com/socketplane/libovsdb"
 )
@@ -23,6 +24,7 @@ type VRSConnection struct {
 	ovsdbClient         *libovsdb.OvsdbClient
 	vmTable             ovsdb.NuageTable
 	portTable           ovsdb.NuageTable
+	controllerTable     ovsdb.NuageTable
 	updatesChan         chan *libovsdb.TableUpdates
 	pncTable            portNameChannelMap
 	pnpTable            portNamePortInfoMap
@@ -63,6 +65,7 @@ func NewUnixSocketConnection(socketfile string) (VRSConnection, error) {
 
 	vrsConnection.vmTable.TableName = ovsdb.NuageVMTable
 	vrsConnection.portTable.TableName = ovsdb.NuagePortTable
+	vrsConnection.controllerTable.TableName = ovsdb.ControllerTable
 	vrsConnection.pncTable = make(portNameChannelMap)
 	vrsConnection.pnpTable = make(portNamePortInfoMap)
 	vrsConnection.registrationChannel = make(chan *Registration)
