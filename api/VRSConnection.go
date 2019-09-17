@@ -22,9 +22,9 @@ type Registration struct {
 // VRSConnection represent the OVSDB connection to the VRS
 type VRSConnection struct {
 	ovsdbClient         *libovsdb.OvsdbClient
-	vmTable             ovsdb.NuageTable
-	portTable           ovsdb.NuageTable
-	controllerTable     ovsdb.NuageTable
+	vmTable             ovsdb.NuageTableOps
+	portTable           ovsdb.NuageTableOps
+	controllerTable     ovsdb.NuageTableOps
 	updatesChan         chan *libovsdb.TableUpdates
 	pncTable            portNameChannelMap
 	pnpTable            portNamePortInfoMap
@@ -63,9 +63,9 @@ func NewUnixSocketConnection(socketfile string) (VRSConnection, error) {
 		return vrsConnection, err
 	}
 
-	vrsConnection.vmTable.TableName = ovsdb.NuageVMTable
-	vrsConnection.portTable.TableName = ovsdb.NuagePortTable
-	vrsConnection.controllerTable.TableName = ovsdb.ControllerTable
+	vrsConnection.vmTable = &ovsdb.NuageTable{TableName: ovsdb.NuageVMTable}
+	vrsConnection.portTable = &ovsdb.NuageTable{TableName: ovsdb.NuagePortTable}
+	vrsConnection.controllerTable = &ovsdb.NuageTable{TableName: ovsdb.ControllerTable}
 	vrsConnection.pncTable = make(portNameChannelMap)
 	vrsConnection.pnpTable = make(portNamePortInfoMap)
 	vrsConnection.registrationChannel = make(chan *Registration)
