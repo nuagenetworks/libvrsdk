@@ -11,6 +11,7 @@ import (
 // These constants describe the Nuage_VM_Table
 const (
 	NuageVMTable                    = "Nuage_VM_Table"
+	NuageVMTableColumnVMName        = "vm_name"
 	NuageVMTableColumnVMUUID        = "vm_uuid"
 	NuageVMTableColumnVMName        = "vm_name"
 	NuageVMTableColumnPorts         = "ports"
