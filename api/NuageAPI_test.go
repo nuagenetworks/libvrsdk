@@ -3,6 +3,13 @@ package api
 import (
 	"bytes"
 	"fmt"
+	"log"
+	"math/rand"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/docker/distribution/uuid"
 	"github.com/nuagenetworks/go-bambou/bambou"
 	"github.com/nuagenetworks/libvrsdk/api/entity"
@@ -10,12 +17,6 @@ import (
 	"github.com/nuagenetworks/libvrsdk/test/util"
 	"github.com/nuagenetworks/vspk-go/vspk"
 	"golang.org/x/crypto/ssh"
-	"log"
-	"math/rand"
-	"os"
-	"strings"
-	"testing"
-	"time"
 )
 
 const (
@@ -47,7 +48,7 @@ var Root *vspk.Me
 func init() {
 	VSDConnection, Root = vspk.NewSession(VSDUsername, VSDPassword, VSDOrganization, VSDURL)
 	if err1, err2 := VSDConnection.SetInsecureSkipVerify(true), VSDConnection.Start(); err1 != nil || err2 != nil {
-		panic("Unable to connect to the VSD")
+		log.Printf("Error while establishing remote session to VSD")
 	}
 }
 
@@ -268,7 +269,7 @@ func TestGetAllVMsVports(t *testing.T) {
 
 	err = util.EnableOVSDBRPCSocket(VRSPort)
 	if err != nil {
-		t.Fatal("Unable to add an interface to the ovsdb-server on VRS to make it accept RPCs via TCP socket")
+		t.Skip("Unable to add an interface to the ovsdb-server on VRS to make it accept RPCs via TCP socket")
 	}
 
 	if vrsConnection, err = NewUnixSocketConnection(UnixSocketFile); err != nil {
@@ -337,7 +338,7 @@ func TestContainerCreateDelete(t *testing.T) {
 
 	err = util.EnableOVSDBRPCSocket(VRSPort)
 	if err != nil {
-		t.Fatal("Unable to add an interface to the ovsdb-server on VRS to make it accept RPCs via TCP socket")
+		t.Skip("Unable to add an interface to the ovsdb-server on VRS to make it accept RPCs via TCP socket")
 	}
 
 	if vrsConnection, err = NewUnixSocketConnection(UnixSocketFile); err != nil {
@@ -423,7 +424,7 @@ func TestVMCreateDelete(t *testing.T) {
 
 	err = util.EnableOVSDBRPCSocket(VRSPort)
 	if err != nil {
-		t.Fatal("Unable to add an interface to the ovsdb-server on VRS to make it accept RPCs via TCP socket")
+		t.Skip("Unable to add an interface to the ovsdb-server on VRS to make it accept RPCs via TCP socket")
 	}
 
 	if vrsConnection, err = NewUnixSocketConnection(UnixSocketFile); err != nil {
@@ -543,7 +544,7 @@ func TestVMMigrate(t *testing.T) {
 
 	err = util.EnableOVSDBRPCSocket(VRSPort)
 	if err != nil {
-		t.Fatal("Unable to add an interface to the ovsdb-server on VRS to make it accept RPCs via TCP socket")
+		t.Skip("Unable to add an interface to the ovsdb-server on VRS to make it accept RPCs via TCP socket")
 	}
 
 	if sourceVrsConnection, err = NewUnixSocketConnection(UnixSocketFile); err != nil {
@@ -684,7 +685,7 @@ func TestVMHotNICAdd(t *testing.T) {
 
 	err = util.EnableOVSDBRPCSocket(VRSPort)
 	if err != nil {
-		t.Fatal("Unable to add an interface to the ovsdb-server on VRS to make it accept RPCs via TCP socket")
+		t.Skip("Unable to add an interface to the ovsdb-server on VRS to make it accept RPCs via TCP socket")
 	}
 
 	if vrsConnection, err = NewUnixSocketConnection(UnixSocketFile); err != nil {
@@ -857,7 +858,7 @@ func TestVMReconfigure(t *testing.T) {
 
 	err = util.EnableOVSDBRPCSocket(VRSPort)
 	if err != nil {
-		t.Fatal("Unable to add an interface to the ovsdb-server on VRS to make it accept RPCs via TCP socket")
+		t.Skip("Unable to add an interface to the ovsdb-server on VRS to make it accept RPCs via TCP socket")
 	}
 
 	if vrsConnection, err = NewUnixSocketConnection(UnixSocketFile); err != nil {
@@ -1014,7 +1015,7 @@ func TestVMPowerOff(t *testing.T) {
 
 	err = util.EnableOVSDBRPCSocket(VRSPort)
 	if err != nil {
-		t.Fatal("Unable to add an interface to the ovsdb-server on VRS to make it accept RPCs via TCP socket")
+		t.Skip("Unable to add an interface to the ovsdb-server on VRS to make it accept RPCs via TCP socket")
 	}
 
 	if vrsConnection, err = NewUnixSocketConnection(UnixSocketFile); err != nil {
@@ -1137,7 +1138,7 @@ func TestSplitActivation(t *testing.T) {
 
 	vrsConnection, err1 := NewUnixSocketConnection(UnixSocketFile)
 	if err1 != nil {
-		t.Fatal("Unable to connect to the VRS")
+		t.Skip("Unable to connect to the VRS")
 	}
 
 	enterprise, err := util.FetchEnterprise(Root, Enterprise)
@@ -1150,7 +1151,12 @@ func TestSplitActivation(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
-	subnet, err := util.FetchSubnet(domain, Network1)
+	zone, err := util.FetchZone(domain, Zone)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	subnet, err := util.FetchSubnet(zone, Network1)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}

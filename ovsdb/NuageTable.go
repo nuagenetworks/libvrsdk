@@ -2,6 +2,7 @@ package ovsdb
 
 import (
 	"fmt"
+
 	"github.com/golang/glog"
 	"github.com/socketplane/libovsdb"
 )
@@ -45,7 +46,7 @@ func (nuageTable *NuageTable) InsertRow(ovs *libovsdb.OvsdbClient, row NuageTabl
 		return (errStr)
 	}
 
-	glog.V(2).Info("Insertion into Nuage VM Table succeeded with UUID %s", reply[0].UUID)
+	glog.V(2).Infof("Insertion into Nuage VM Table succeeded with UUID %s", reply[0].UUID)
 
 	return nil
 }

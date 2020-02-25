@@ -2,14 +2,15 @@ package ovsdb
 
 import (
 	"fmt"
-	"github.com/docker/distribution/uuid"
-	"github.com/nuagenetworks/libvrsdk/api/entity"
-	"github.com/socketplane/libovsdb"
 	"math/rand"
 	"reflect"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/docker/distribution/uuid"
+	"github.com/nuagenetworks/libvrsdk/api/entity"
+	"github.com/socketplane/libovsdb"
 )
 
 const OvsdbServerIP = "127.0.0.1"
@@ -48,7 +49,7 @@ func createTestVMTableRow() NuageVMTableRow {
 func TestOVSConnection(t *testing.T) {
 	ovs, err := libovsdb.Connect(OvsdbServerIP, OvsdbServerPort)
 	if err != nil {
-		t.Fatal("Failed to Connect. error:", err)
+		t.Skip("Failed to Connect. error:", err)
 		panic(err)
 	}
 	defer ovs.Disconnect()
@@ -66,7 +67,7 @@ func TestNuageVMTableInsert(t *testing.T) {
 
 	ovs, err := libovsdb.Connect(OvsdbServerIP, OvsdbServerPort)
 	if err != nil {
-		t.Fatal("Failed to Connect. error:", err)
+		t.Skip("Failed to Connect. error:", err)
 		panic(err)
 	}
 	defer ovs.Disconnect()
@@ -108,7 +109,7 @@ func TestNuageVMTableUpdate(t *testing.T) {
 
 	ovs, err := libovsdb.Connect(OvsdbServerIP, OvsdbServerPort)
 	if err != nil {
-		t.Fatal("Failed to Connect. error:", err)
+		t.Skip("Failed to Connect. error:", err)
 		panic(err)
 	}
 	defer ovs.Disconnect()
@@ -201,7 +202,7 @@ func TestNuageVMTableDelete(t *testing.T) {
 
 	ovs, err := libovsdb.Connect(OvsdbServerIP, OvsdbServerPort)
 	if err != nil {
-		t.Fatal("Failed to Connect. error:", err)
+		t.Skip("Failed to Connect. error:", err)
 		panic(err)
 	}
 	defer ovs.Disconnect()

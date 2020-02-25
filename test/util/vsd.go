@@ -103,57 +103,49 @@ func VerifyVSDPortDeletion(root *vspk.Me, vsdEnterprise string, vsdDomain string
 // FetchEnterprise fetches enterprise object
 func FetchEnterprise(root *vspk.Me, vsdEnterprise string) (*vspk.Enterprise, *bambou.Error) {
 
+	var enterprise *vspk.Enterprise
 	enterpriseFetchingInfo := &bambou.FetchingInfo{Filter: "name == \"" + vsdEnterprise + "\""}
 	enterprises, enterpriseErr := root.Enterprises(enterpriseFetchingInfo)
-	if enterpriseErr != nil {
-		return nil, enterpriseErr
+	if enterpriseErr == nil {
+		enterprise = enterprises[0]
 	}
-	if len(enterprises) == 0 {
-		return nil, bambou.NewError(101, "no matching enterprise found on VSD")
-	}
-	return enterprises[0], nil
+	return enterprise, enterpriseErr
 }
 
 // FetchDomain fetches domain object
 func FetchDomain(enterprise *vspk.Enterprise, vsdDomain string) (*vspk.Domain, *bambou.Error) {
 
+	var domain *vspk.Domain
 	domainFetchingInfo := &bambou.FetchingInfo{Filter: "name == \"" + vsdDomain + "\""}
 	domains, domainErr := enterprise.Domains(domainFetchingInfo)
-	if domainErr != nil {
-		return nil, domainErr
+	if domainErr == nil {
+		domain = domains[0]
 	}
-	if len(domains) == 0 {
-		return nil, bambou.NewError(102, "no matching domain found on VSD")
-	}
-	return domains[0], nil
+	return domain, domainErr
 }
 
 // FetchZone fetches zone object
 func FetchZone(domain *vspk.Domain, vsdZone string) (*vspk.Zone, *bambou.Error) {
 
+	var zone *vspk.Zone
 	zoneFetchingInfo := &bambou.FetchingInfo{Filter: "name == \"" + vsdZone + "\""}
 	zones, zonesErr := domain.Zones(zoneFetchingInfo)
-	if zonesErr != nil {
-		return nil, zonesErr
+	if zonesErr == nil {
+		zone = zones[0]
 	}
-	if len(zones) == 0 {
-		return nil, bambou.NewError(103, "no matching zone found on VSD")
-	}
-	return zones[0], nil
+	return zone, zonesErr
 }
 
-// FetchSubnete fetches subnet object
-func FetchSubnet(domain *vspk.Domain, vsdSubnet string) (*vspk.Subnet, *bambou.Error) {
+// FetchSubnet fetches subnet object
+func FetchSubnet(zone *vspk.Zone, vsdSubnet string) (*vspk.Subnet, *bambou.Error) {
 
+	var subnet *vspk.Subnet
 	subnetFetchingInfo := &bambou.FetchingInfo{Filter: "name == \"" + vsdSubnet + "\""}
-	subnets, subnetsErr := domain.Subnets(subnetFetchingInfo)
-	if subnetsErr != nil {
-		return nil, subnetsErr
+	subnets, subnetsErr := zone.Subnets(subnetFetchingInfo)
+	if subnetsErr == nil {
+		subnet = subnets[0]
 	}
-	if len(subnets) == 0 {
-		return nil, bambou.NewError(103, "no matching subnets found on VSD")
-	}
-	return subnets[0], nil
+	return subnet, subnetsErr
 }
 
 // FetchAllPorts fetches all port objects

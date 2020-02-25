@@ -2,12 +2,13 @@ package ovsdb
 
 import (
 	"fmt"
-	"github.com/nuagenetworks/libvrsdk/api/entity"
-	"github.com/socketplane/libovsdb"
 	"math/rand"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/nuagenetworks/libvrsdk/api/entity"
+	"github.com/socketplane/libovsdb"
 )
 
 const mac1 = "76:22:F6:70:4E:47"
@@ -54,8 +55,7 @@ func TestNuagePortTableInsert(t *testing.T) {
 
 	ovs, err := libovsdb.Connect(OvsdbServerIP, OvsdbServerPort)
 	if err != nil {
-		t.Fatal("Failed to Connect. error:", err)
-		panic(err)
+		t.Skip("Failed to Connect. error:", err)
 	}
 	defer ovs.Disconnect()
 
@@ -96,8 +96,7 @@ func TestNuagePortTableUpdate(t *testing.T) {
 
 	ovs, err := libovsdb.Connect(OvsdbServerIP, OvsdbServerPort)
 	if err != nil {
-		t.Fatal("Failed to Connect. error:", err)
-		panic(err)
+		t.Skip("Failed to Connect. error:", err)
 	}
 	defer ovs.Disconnect()
 
@@ -146,8 +145,7 @@ func TestNuagePortTableDelete(t *testing.T) {
 
 	ovs, err := libovsdb.Connect(OvsdbServerIP, OvsdbServerPort)
 	if err != nil {
-		t.Fatal("Failed to Connect. error:", err)
-		panic(err)
+		t.Skip("Failed to Connect. error:", err)
 	}
 	defer ovs.Disconnect()
 
@@ -171,8 +169,7 @@ func TestNuagePortTableDelete(t *testing.T) {
 func TestNuagePortTableMultipleReads(t *testing.T) {
 	ovs, err := libovsdb.Connect(OvsdbServerIP, OvsdbServerPort)
 	if err != nil {
-		t.Fatal("Failed to Connect. error:", err)
-		panic(err)
+		t.Skip("Failed to Connect. error:", err)
 	}
 	defer ovs.Disconnect()
 

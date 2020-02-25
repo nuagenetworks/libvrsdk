@@ -38,26 +38,37 @@ var ZFBAutoAssignmentIdentity = bambou.Identity{
 // ZFBAutoAssignmentsList represents a list of ZFBAutoAssignments
 type ZFBAutoAssignmentsList []*ZFBAutoAssignment
 
-// ZFBAutoAssignmentsAncestor is the interface of an ancestor of a ZFBAutoAssignment must implement.
+// ZFBAutoAssignmentsAncestor is the interface that an ancestor of a ZFBAutoAssignment must implement.
+// An Ancestor is defined as an entity that has ZFBAutoAssignment as a descendant.
+// An Ancestor can get a list of its child ZFBAutoAssignments, but not necessarily create one.
 type ZFBAutoAssignmentsAncestor interface {
 	ZFBAutoAssignments(*bambou.FetchingInfo) (ZFBAutoAssignmentsList, *bambou.Error)
-	CreateZFBAutoAssignments(*ZFBAutoAssignment) *bambou.Error
+}
+
+// ZFBAutoAssignmentsParent is the interface that a parent of a ZFBAutoAssignment must implement.
+// A Parent is defined as an entity that has ZFBAutoAssignment as a child.
+// A Parent is an Ancestor which can create a ZFBAutoAssignment.
+type ZFBAutoAssignmentsParent interface {
+	ZFBAutoAssignmentsAncestor
+	CreateZFBAutoAssignment(*ZFBAutoAssignment) *bambou.Error
 }
 
 // ZFBAutoAssignment represents the model of a zfbautoassignment
 type ZFBAutoAssignment struct {
-	ID                      string        `json:"ID,omitempty"`
-	ParentID                string        `json:"parentID,omitempty"`
-	ParentType              string        `json:"parentType,omitempty"`
-	Owner                   string        `json:"owner,omitempty"`
-	ZFBMatchAttribute       string        `json:"ZFBMatchAttribute,omitempty"`
-	ZFBMatchAttributeValues []interface{} `json:"ZFBMatchAttributeValues,omitempty"`
-	Name                    string        `json:"name,omitempty"`
-	LastUpdatedBy           string        `json:"lastUpdatedBy,omitempty"`
-	Description             string        `json:"description,omitempty"`
-	EntityScope             string        `json:"entityScope,omitempty"`
-	AssociatedEnterpriseID  string        `json:"associatedEnterpriseID,omitempty"`
-	ExternalID              string        `json:"externalID,omitempty"`
+	ID                       string        `json:"ID,omitempty"`
+	ParentID                 string        `json:"parentID,omitempty"`
+	ParentType               string        `json:"parentType,omitempty"`
+	Owner                    string        `json:"owner,omitempty"`
+	ZFBMatchAttribute        string        `json:"ZFBMatchAttribute,omitempty"`
+	ZFBMatchAttributeValues  []interface{} `json:"ZFBMatchAttributeValues,omitempty"`
+	Name                     string        `json:"name,omitempty"`
+	LastUpdatedBy            string        `json:"lastUpdatedBy,omitempty"`
+	Description              string        `json:"description,omitempty"`
+	EntityScope              string        `json:"entityScope,omitempty"`
+	Priority                 int           `json:"priority,omitempty"`
+	AssociatedEnterpriseID   string        `json:"associatedEnterpriseID,omitempty"`
+	AssociatedEnterpriseName string        `json:"associatedEnterpriseName,omitempty"`
+	ExternalID               string        `json:"externalID,omitempty"`
 }
 
 // NewZFBAutoAssignment returns a new *ZFBAutoAssignment
