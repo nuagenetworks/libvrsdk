@@ -1,0 +1,11 @@
+- project:
+    templates:
+      - golang-jobs
+    check:
+      jobs:
+        - golang-lint:
+            voting: false
+    gate:
+      jobs:
+        - golang-lint:
+            voting: false
