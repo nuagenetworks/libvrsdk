@@ -92,7 +92,10 @@ func execCMDOnRemoteHost(cmd string, host string) error {
 func getPortInfo(vrsConnection VRSConnection, port string) (*PortIPv4Info, error) {
 
 	portInfoUpdateChan := make(chan *PortIPv4Info)
-	vrsConnection.RegisterForPortUpdates(port, portInfoUpdateChan)
+	err := vrsConnection.RegisterForPortUpdates(port, portInfoUpdateChan)
+	if err != nil {
+		return &PortIPv4Info{}, fmt.Errorf("Error registering for port update from VRS %s", err)
+	}
 	ticker := time.NewTicker(time.Duration(10) * time.Second)
 	portInfo := &PortIPv4Info{}
 	select {
@@ -566,8 +569,7 @@ func TestVMMigrate(t *testing.T) {
 	time.Sleep(time.Duration(15) * time.Second)
 
 	// Verifying the VM gets resolved with an IP address on VRS-VM
-	portState := make(map[port.StateKey]interface{})
-	portState, err = sourceVrsConnection.GetPortState(vmInfo["entityport"])
+	portState, err := sourceVrsConnection.GetPortState(vmInfo["entityport"])
 
 	if err != nil {
 		t.Fatal("Unable to query port state on VRS")
@@ -1115,8 +1117,7 @@ func TestVMPowerOff(t *testing.T) {
 	// t.Logf("Waiting for 60 seconds before verifying port gets removed from VRS")
 	// time.Sleep(time.Duration(60) * time.Second)
 
-	portState := make(map[port.StateKey]interface{})
-	portState, _ = vrsConnection.GetPortState(vmInfo["entityport"])
+	portState, _ := vrsConnection.GetPortState(vmInfo["entityport"])
 
 	if _, ok := portState[port.StateKeyIPAddress]; ok {
 		t.Fatal("Entry for deleted VM Port still present in OVSDB table")
@@ -1198,9 +1199,8 @@ func TestSplitActivation(t *testing.T) {
 	var entityInfo EntityInfo
 	entityInfo.Name = containerInfo["name"]
 	entityInfo.UUID = containerInfo["vmuuid"]
-	var err2 error
 	// Add the paired veth port to alubr0 on VRS
-	err2 = vrsConnection.AddPortToAlubr0(containerInfo["entityport"], entityInfo)
+	err2 := vrsConnection.AddPortToAlubr0(containerInfo["entityport"], entityInfo)
 	if err2 != nil {
 		t.Errorf("Error inserting row in alubr0: %v", err)
 		t.Fatal("Unable to add veth port to alubr0")

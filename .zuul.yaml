@@ -4,8 +4,8 @@
     check:
       jobs:
         - golang-lint:
-            voting: false
+            voting: true
     gate:
       jobs:
         - golang-lint:
-            voting: false
+            voting: true
