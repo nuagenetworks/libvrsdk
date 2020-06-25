@@ -276,7 +276,7 @@ func TestGetAllVMsVports(t *testing.T) {
 	}
 
 	if vrsConnection, err = NewUnixSocketConnection(UnixSocketFile); err != nil {
-		t.Fatal("Unable to connect to the VRS")
+		t.Skip("Unable to connect to the VRS")
 	}
 
 	vmInfo := make(map[string]string)
